@@ -2929,7 +2929,7 @@ let autoSaveTimer=null;
 
 function loadDB(){
   try{
-    // 1순위: 내장 데이터 (GitHub Pages / 아이패드 등 — localStorage 불필요)
+    // 내장 데이터 (GitHub Pages / 아이패드 — localStorage 불필요)
     if(window.__EMBEDDED_DB__&&window.__EMBEDDED_DB__.students){
       DB=JSON.parse(JSON.stringify(window.__EMBEDDED_DB__));return;
     }
@@ -2937,11 +2937,10 @@ function loadDB(){
   loadSample();
 }
 function saveDB(){
-  // window 변수 업데이트 (세션 중 변경사항 유지)
   try{window.__EMBEDDED_DB__=JSON.parse(JSON.stringify(DB));}catch(e){}
   updateAutosaveBadge('saved');
 }
-function scheduleSave(){updateAutosaveBadge('pending');clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(()=>{saveDB();showToast('💾 자동저장 완료 — "HTML로 저장" 버튼으로 영구 저장하세요');},1500);}
+function scheduleSave(){updateAutosaveBadge('pending');clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(()=>{saveDB();showToast('💾 자동저장 완료 — 영구저장은 "HTML로 저장" 버튼 사용');},1500);}
 function updateAutosaveBadge(s){const el=document.getElementById('autosaveBadge');if(s==='saved'){el.textContent='✓ 저장됨';el.style.color='#86EFAC';}else{el.textContent='● 저장 대기중';el.style.color='#FCD34D';}}
 function saveDraft(d){
   try{window.__DRAFT_DB__=d;}catch(e){}
@@ -2982,6 +2981,9 @@ window.onload=()=>{
 };
 
 function renderAll(){renderStats();renderStudentGrid();renderHistoryTable();renderSelectStudentGrid();}
+
+function openModal(id){const el=document.getElementById(id);if(el)el.classList.add('open');}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
 
 function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));

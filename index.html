@@ -2929,12 +2929,7 @@ let autoSaveTimer=null;
 
 function loadDB(){
   try{
-    // 1순위: localStorage (컴퓨터 브라우저)
-    const s=localStorage.getItem('tkd_v5');
-    if(s){DB=JSON.parse(s);return;}
-  }catch(e){}
-  try{
-    // 2순위: 내장 데이터 (GitHub Pages / 아이패드 등)
+    // 1순위: 내장 데이터 (GitHub Pages / 아이패드 등 — localStorage 불필요)
     if(window.__EMBEDDED_DB__&&window.__EMBEDDED_DB__.students){
       DB=JSON.parse(JSON.stringify(window.__EMBEDDED_DB__));return;
     }
@@ -2942,26 +2937,21 @@ function loadDB(){
   loadSample();
 }
 function saveDB(){
-  // window 변수 항상 업데이트 (GitHub Pages 환경에서 새로고침 대비)
+  // window 변수 업데이트 (세션 중 변경사항 유지)
   try{window.__EMBEDDED_DB__=JSON.parse(JSON.stringify(DB));}catch(e){}
-  // localStorage는 가능하면 저장 (차단돼도 오류 무시)
-  try{localStorage.setItem('tkd_v5',JSON.stringify(DB));}catch(e){}
   updateAutosaveBadge('saved');
 }
-function scheduleSave(){updateAutosaveBadge('pending');clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(()=>{saveDB();showToast('💾 자동저장 완료');},1500);}
+function scheduleSave(){updateAutosaveBadge('pending');clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(()=>{saveDB();showToast('💾 자동저장 완료 — "HTML로 저장" 버튼으로 영구 저장하세요');},1500);}
 function updateAutosaveBadge(s){const el=document.getElementById('autosaveBadge');if(s==='saved'){el.textContent='✓ 저장됨';el.style.color='#86EFAC';}else{el.textContent='● 저장 대기중';el.style.color='#FCD34D';}}
 function saveDraft(d){
   try{window.__DRAFT_DB__=d;}catch(e){}
-  try{localStorage.setItem('tkd_draft_v2',JSON.stringify(d));}catch(e){}
 }
 function loadDraft(){
-  try{const s=localStorage.getItem('tkd_draft_v2');if(s)return JSON.parse(s);}catch(e){}
   try{if(window.__DRAFT_DB__)return window.__DRAFT_DB__;}catch(e){}
   return null;
 }
 function clearDraft(){
   try{window.__DRAFT_DB__=null;}catch(e){}
-  try{localStorage.removeItem('tkd_draft_v2');}catch(e){}
 }
 
 function loadSample(){

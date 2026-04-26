@@ -3704,32 +3704,55 @@ async function saveReportJPG(studentId){
   }
 }
 
-// HTML → JPG 변환 (숨김 div 직접 렌더링 — iframe 미사용, GitHub Pages 완전 호환)
+// HTML → JPG 변환 (Blob URL → 숨김 iframe → html2canvas — 완전한 HTML 문서 처리)
 function renderHTMLtoJPG(htmlContent, filename){
   return new Promise((resolve,reject)=>{
     if(typeof html2canvas==='undefined'){reject(new Error('html2canvas 로드 안됨'));return;}
-    const wrap=document.createElement('div');
-    wrap.style.cssText='position:fixed;top:0;left:-9999px;width:390px;background:#EBF8FF;z-index:-1;';
-    wrap.innerHTML=htmlContent;
-    document.body.appendChild(wrap);
-    setTimeout(()=>{
-      const pageEl=wrap.querySelector('.page')||wrap;
-      const realHeight=Math.max(pageEl.scrollHeight,pageEl.offsetHeight,100);
-      wrap.style.height=realHeight+'px';
-      html2canvas(pageEl,{
-        scale:3,useCORS:true,allowTaint:true,
-        backgroundColor:'#EBF8FF',
-        width:390,height:realHeight,
-        windowWidth:390,scrollX:0,scrollY:0,logging:false
-      }).then(canvas=>{
-        document.body.removeChild(wrap);
-        const a=document.createElement('a');
-        a.href=canvas.toDataURL('image/jpeg',0.94);
-        a.download=filename+'.jpg';
-        document.body.appendChild(a);a.click();document.body.removeChild(a);
-        resolve();
-      }).catch(err=>{document.body.removeChild(wrap);reject(err);});
-    },800);
+
+    // Blob URL 생성 (완전한 HTML 문서를 안전하게 로드)
+    const blob=new Blob([htmlContent],{type:'text/html;charset=utf-8'});
+    const blobUrl=URL.createObjectURL(blob);
+
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;top:0;left:-9999px;width:390px;height:200px;border:none;visibility:hidden;';
+    document.body.appendChild(iframe);
+
+    iframe.onload=()=>{
+      try{
+        const doc=iframe.contentDocument||iframe.contentWindow.document;
+        const pageEl=doc.querySelector('.page')||doc.body;
+        const realHeight=Math.max(pageEl.scrollHeight,doc.body.scrollHeight,200);
+        iframe.style.height=realHeight+'px';
+
+        setTimeout(()=>{
+          html2canvas(pageEl,{
+            scale:3,useCORS:true,allowTaint:true,
+            backgroundColor:'#EBF8FF',
+            width:390,height:realHeight,
+            windowWidth:390,scrollX:0,scrollY:0,logging:false
+          }).then(canvas=>{
+            URL.revokeObjectURL(blobUrl);
+            document.body.removeChild(iframe);
+            const a=document.createElement('a');
+            a.href=canvas.toDataURL('image/jpeg',0.94);
+            a.download=filename+'.jpg';
+            document.body.appendChild(a);a.click();document.body.removeChild(a);
+            resolve();
+          }).catch(err=>{
+            URL.revokeObjectURL(blobUrl);
+            document.body.removeChild(iframe);
+            reject(err);
+          });
+        },600);
+      }catch(err){
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(iframe);
+        reject(err);
+      }
+    };
+
+    iframe.onerror=()=>{URL.revokeObjectURL(blobUrl);document.body.removeChild(iframe);reject(new Error('iframe 로드 실패'));};
+    iframe.src=blobUrl;
   });
 }
 

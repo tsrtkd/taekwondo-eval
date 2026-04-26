@@ -2803,10 +2803,15 @@ window.__EMBEDDED_DB__ = {"students":[{"id":"s1777121547401","name":"변유준",
             <option value="밤띠">🟫 밤띠</option>
             <option value="밤검띠">🟫🖤 밤검띠 (4~6세)</option>
             <option value="빨간띠">🟥 빨간띠</option>
-            <option value="1품·단">⬛ 1품·단</option><option value="2품·단">⬛ 2품·단</option>
-            <option value="3품·단">⬛ 3품·단</option><option value="4품·단">⬛ 4품·단</option>
-          <label class="form-label">품·단 급수</label>
+            <option value="1품·단">⬛ 1품·단</option>
+            <option value="2품·단">⬛ 2품·단</option>
+            <option value="3품·단">⬛ 3품·단</option>
+            <option value="4품·단">⬛ 4품·단</option>
           </select>
+        </div>
+        <div class="form-group" id="editGradeWrap" style="display:none">
+          <label class="form-label">품·단 급수</label>
+          <select class="form-select" id="editGrade"></select>
         </div>
         <div class="form-group" style="grid-column:1/-1"><label class="form-label">학교 / 학년</label><input class="form-input" id="editSchool"></div>
         <div class="form-group" style="grid-column:1/-1"><label class="form-label">부모님 연락처</label><input class="form-input" id="editParentPhone"></div>
@@ -3683,7 +3688,6 @@ function printReport(){
 }
 
 // 단일 JPG 저장
-// ── 개별 JPG 저장 ──
 async function saveReportJPG(studentId){
   if(!studentId)return;
   const student=DB.students.find(s=>s.id===studentId);
@@ -3692,75 +3696,55 @@ async function saveReportJPG(studentId){
   if(!evals.length){showToast('심사 기록이 없습니다');return;}
   showToast('📱 이미지 생성 중...');
   try{
-    const html=buildReportHTML(studentId);
-    await renderHTMLtoJPG(html, student.name+'_심사결과지');
+    await renderHTMLtoJPG(buildReportHTML(studentId), student.name+'_심사결과지');
     showToast('✅ JPG 저장 완료! — 다운로드 폴더를 확인하세요');
   }catch(e){
     console.error(e);
-    showToast('⚠️ 이미지 저장 실패 — 인쇄 버튼을 이용해 주세요');
+    showToast('⚠️ 저장 실패 — 인쇄 버튼을 이용해 주세요');
   }
 }
 
-// ── HTML → JPG 변환 (div 직접 렌더링 — iframe 미사용, GitHub Pages 완전 호환) ──
+// HTML → JPG 변환 (숨김 div 직접 렌더링 — iframe 미사용, GitHub Pages 완전 호환)
 function renderHTMLtoJPG(htmlContent, filename){
   return new Promise((resolve,reject)=>{
-    if(typeof html2canvas==='undefined'){reject(new Error('html2canvas 라이브러리 로드 안됨'));return;}
-
-    // 숨김 div에 결과지 HTML 삽입 후 html2canvas로 캡처
+    if(typeof html2canvas==='undefined'){reject(new Error('html2canvas 로드 안됨'));return;}
     const wrap=document.createElement('div');
     wrap.style.cssText='position:fixed;top:0;left:-9999px;width:390px;background:#EBF8FF;z-index:-1;';
     wrap.innerHTML=htmlContent;
     document.body.appendChild(wrap);
-
-    // 폰트·이미지 로드 대기
     setTimeout(()=>{
       const pageEl=wrap.querySelector('.page')||wrap;
-      const realHeight=Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 100);
+      const realHeight=Math.max(pageEl.scrollHeight,pageEl.offsetHeight,100);
       wrap.style.height=realHeight+'px';
-
       html2canvas(pageEl,{
-        scale:3,
-        useCORS:true,
-        allowTaint:true,
+        scale:3,useCORS:true,allowTaint:true,
         backgroundColor:'#EBF8FF',
-        width:390,
-        height:realHeight,
-        windowWidth:390,
-        scrollX:0,
-        scrollY:0,
-        logging:false
+        width:390,height:realHeight,
+        windowWidth:390,scrollX:0,scrollY:0,logging:false
       }).then(canvas=>{
         document.body.removeChild(wrap);
-        const jpgData=canvas.toDataURL('image/jpeg',0.94);
         const a=document.createElement('a');
-        a.href=jpgData;
+        a.href=canvas.toDataURL('image/jpeg',0.94);
         a.download=filename+'.jpg';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
         resolve();
-      }).catch(err=>{
-        document.body.removeChild(wrap);
-        reject(err);
-      });
+      }).catch(err=>{document.body.removeChild(wrap);reject(err);});
     },800);
   });
 }
 
-// ── 선택 저장 모달 열기 ──
+// ── 선택 저장 ──
 function openSelectiveExportModal(){
   const withEval=DB.students.filter(s=>DB.evaluations.some(e=>e.studentId===s.id));
   if(!withEval.length){showToast('심사 기록이 있는 수련생이 없습니다');return;}
-  let html=`
-  <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+  let html=`<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <button onclick="selExportCheckAll(true)" style="padding:5px 12px;border-radius:6px;border:1px solid #93C5FD;background:#DBEAFE;color:#1E40AF;cursor:pointer;font-size:12px;font-weight:600">✅ 전체 선택</button>
     <button onclick="selExportCheckAll(false)" style="padding:5px 12px;border-radius:6px;border:1px solid #D1D5DB;background:#F3F4F6;color:#374151;cursor:pointer;font-size:12px;font-weight:600">☐ 전체 해제</button>
     <span id="selExportCount" style="font-size:12px;color:#64748B;margin-left:4px">0명 선택됨</span>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;max-height:55vh;overflow-y:auto;padding:2px;">`;
+  </div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;max-height:55vh;overflow-y:auto;padding:2px;">`;
   withEval.forEach(s=>{
-    html+=`<label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:2px solid #E2E8F0;border-radius:8px;cursor:pointer;background:#F8FAFF;transition:border-color .15s" onmouseover="this.style.borderColor='#93C5FD'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#3B82F6':'#E2E8F0'">
-      <input type="checkbox" class="sel-export-chk" data-id="${s.id}" onchange="updateSelExportCount();this.closest('label').style.borderColor=this.checked?'#3B82F6':'#E2E8F0'" style="accent-color:#3B82F6;width:15px;height:15px;cursor:pointer">
+    html+=`<label style="display:flex;align-items:center;gap:7px;padding:8px 10px;border:2px solid #E2E8F0;border-radius:8px;cursor:pointer;background:#F8FAFF;">
+      <input type="checkbox" class="sel-export-chk" data-id="${s.id}" onchange="updateSelExportCount()" style="accent-color:#3B82F6;width:15px;height:15px;cursor:pointer">
       <span style="font-size:13px;font-weight:600;color:#1E293B">${s.name}</span>
     </label>`;
   });
@@ -3770,16 +3754,12 @@ function openSelectiveExportModal(){
   openModal('modalSelectiveExport');
 }
 function selExportCheckAll(val){
-  document.querySelectorAll('.sel-export-chk').forEach(chk=>{
-    chk.checked=val;
-    chk.closest('label').style.borderColor=val?'#3B82F6':'#E2E8F0';
-  });
+  document.querySelectorAll('.sel-export-chk').forEach(c=>{c.checked=val;});
   updateSelExportCount();
 }
 function updateSelExportCount(){
   const n=document.querySelectorAll('.sel-export-chk:checked').length;
-  const el=document.getElementById('selExportCount');
-  if(el)el.textContent=n+'명 선택됨';
+  const el=document.getElementById('selExportCount');if(el)el.textContent=n+'명 선택됨';
 }
 async function runSelectiveExport(){
   const ids=[...document.querySelectorAll('.sel-export-chk:checked')].map(c=>c.dataset.id);
@@ -3790,16 +3770,15 @@ async function runSelectiveExport(){
   for(const id of ids){
     const s=DB.students.find(st=>st.id===id);if(!s)continue;
     try{
-      await renderHTMLtoJPG(buildReportHTML(id), s.name+'_심사결과지');
-      done++;
-      showToast(`📸 저장 중... ${done}/${ids.length} (${s.name})`);
+      await renderHTMLtoJPG(buildReportHTML(id),s.name+'_심사결과지');
+      done++;showToast(`📸 ${done}/${ids.length} (${s.name})`);
       await new Promise(r=>setTimeout(r,700));
-    }catch(e){showToast(`⚠️ ${s.name} 저장 실패, 건너뜀`);}
+    }catch(e){showToast(`⚠️ ${s.name} 실패`);}
   }
-  showToast(`✅ 완료! ${done}/${ids.length}명 JPG 저장됨`);
+  showToast(`✅ 완료! ${done}/${ids.length}명 저장됨`);
 }
 
-// ── 전체 일괄 저장 ──
+// ── 전체 저장 ──
 async function bulkExportJPG(){
   const targets=DB.students.filter(s=>DB.evaluations.some(e=>e.studentId===s.id));
   if(!targets.length){showToast('심사 기록이 있는 수련생이 없습니다');return;}
@@ -3808,13 +3787,12 @@ async function bulkExportJPG(){
   let done=0;
   for(const s of targets){
     try{
-      await renderHTMLtoJPG(buildReportHTML(s.id), s.name+'_심사결과지');
-      done++;
-      showToast(`📸 저장 중... ${done}/${targets.length} (${s.name})`);
+      await renderHTMLtoJPG(buildReportHTML(s.id),s.name+'_심사결과지');
+      done++;showToast(`📸 ${done}/${targets.length} (${s.name})`);
       await new Promise(r=>setTimeout(r,700));
-    }catch(e){showToast(`⚠️ ${s.name} 저장 실패, 건너뜀`);}
+    }catch(e){showToast(`⚠️ ${s.name} 실패`);}
   }
-  showToast(`✅ 완료! ${done}/${targets.length}명 JPG 저장됨`);
+  showToast(`✅ 완료! ${done}/${targets.length}명 저장됨`);
 }
 
 // 구 exportImage (하위 호환)

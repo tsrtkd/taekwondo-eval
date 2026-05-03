@@ -3,16 +3,73 @@
 <head>
 <script>
 (function(){
-  var PW='taesarang2024';
-  var KEY='tkd_auth';
-  if(sessionStorage.getItem(KEY)===PW)return;
-  var pw=prompt('🥋 태사랑 태권도 심사평가\n\n비밀번호를 입력하세요:');
-  if(pw!==PW){
-    document.write('<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#0F172A;color:#fff;flex-direction:column;gap:16px"><div style="font-size:48px">🔒</div><div style="font-size:20px;font-weight:700">접근이 거부되었습니다</div><div style="font-size:14px;color:#94A3B8">올바른 비밀번호를 입력해주세요</div><button onclick="location.reload()" style="margin-top:8px;padding:10px 24px;background:#3B82F6;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">다시 시도</button></div>');
-    document.close();
-    return;
+  var PIN='1111';
+  var KEY='tkd_auth_pin';
+  if(sessionStorage.getItem(KEY)===PIN)return;
+
+  function showPinPad(){
+    var overlay=document.createElement('div');
+    overlay.id='pin-overlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#0F172A;display:flex;align-items:center;justify-content:center;z-index:999999;font-family:sans-serif;';
+
+    var nums=[1,2,3,4,5,6,7,8,9,'',0,'⌫'];
+    var btnHTML=nums.map(function(n){
+      return '<button onclick="pinPress(\''+n+'\')" style="padding:18px 0;font-size:22px;font-weight:700;background:'+(n===''?'transparent':'#1E293B')+';color:#fff;border:none;border-radius:14px;cursor:'+(n===''?'default':'pointer')+';transition:background .1s;"'+(n===''?' disabled':'')+'>'+n+'</button>';
+    }).join('');
+
+    overlay.innerHTML=
+      '<div style="text-align:center;color:#fff;width:300px">'+
+        '<div style="font-size:52px;margin-bottom:8px">🥋</div>'+
+        '<div style="font-size:20px;font-weight:700;margin-bottom:4px">태사랑 태권도</div>'+
+        '<div style="font-size:13px;color:#94A3B8;margin-bottom:28px">PIN 번호를 입력해주세요</div>'+
+        '<div id="pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:28px">'+
+          '<div class="dot" style="width:16px;height:16px;border-radius:50%;background:#334155;border:2px solid #475569"></div>'+
+          '<div class="dot" style="width:16px;height:16px;border-radius:50%;background:#334155;border:2px solid #475569"></div>'+
+          '<div class="dot" style="width:16px;height:16px;border-radius:50%;background:#334155;border:2px solid #475569"></div>'+
+          '<div class="dot" style="width:16px;height:16px;border-radius:50%;background:#334155;border:2px solid #475569"></div>'+
+        '</div>'+
+        '<div id="pin-error" style="color:#EF4444;font-size:13px;height:20px;margin-bottom:12px"></div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:240px;margin:0 auto">'+
+          btnHTML+
+        '</div>'+
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    var entered='';
+    window.pinPress=function(val){
+      if(val==='')return;
+      if(val==='⌫'){ entered=entered.slice(0,-1); }
+      else { if(entered.length>=4)return; entered+=String(val); }
+
+      var dots=document.querySelectorAll('#pin-dots .dot');
+      dots.forEach(function(d,i){
+        d.style.background=i<entered.length?'#3B82F6':'#334155';
+        d.style.borderColor=i<entered.length?'#3B82F6':'#475569';
+      });
+
+      if(entered.length===4){
+        setTimeout(function(){
+          if(entered===PIN){
+            sessionStorage.setItem(KEY,PIN);
+            document.getElementById('pin-overlay').remove();
+            delete window.pinPress;
+          } else {
+            document.getElementById('pin-error').textContent='❌ PIN이 틀렸습니다. 다시 입력해주세요.';
+            entered='';
+            dots.forEach(function(d){d.style.background='#EF4444';d.style.borderColor='#EF4444';});
+            setTimeout(function(){
+              dots.forEach(function(d){d.style.background='#334155';d.style.borderColor='#475569';});
+              document.getElementById('pin-error').textContent='';
+            },700);
+          }
+        },200);
+      }
+    };
   }
-  sessionStorage.setItem(KEY,PW);
+
+  if(document.body){ showPinPad(); }
+  else { document.addEventListener('DOMContentLoaded', showPinPad); }
 })();
 </script>
 <meta charset="UTF-8">
